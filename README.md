@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CoupleSplit — ต้น & แป๋ม</title>
 <style>
 :root{
@@ -12,7 +12,7 @@
 }
 *{box-sizing:border-box;}
 html, body{
-  margin:0; padding:0; width:100%; height:100%;
+  margin:0; padding:0; width:100%; min-height:100%;
   font-family:var(--font-family); background:var(--bg);
   display:flex; justify-content:center; align-items:flex-start;
   background-image: linear-gradient(120deg, #ffe0f0 0%, #fff0f5 100%);
@@ -40,7 +40,11 @@ header p{margin:5px 0 0 0; font-size:14px;}
   box-shadow:0 3px 6px rgba(0,0,0,0.15);
 }
 .swap-btn:hover{background:var(--accent2); color:white; transform:scale(1.05);}
-main{padding:20px; flex:1; display:flex; flex-direction:column;}
+main{
+  padding:20px; flex:1; display:flex; flex-direction:column;
+  overflow:auto;
+  max-height:calc(100vh - 140px);
+}
 .summary{text-align:center; margin-bottom:20px;}
 .summary div{margin:10px 0; font-size:18px; font-weight:600; padding:10px; border-radius:12px; background:#ffffff77; backdrop-filter: blur(5px);}
 .summary .big{font-size:22px; font-weight:700;}
@@ -101,6 +105,14 @@ footer{text-align:center; padding:10px; font-size:12px; color:#555;}
   50%{color:#ff90a0;}
   100%{color:#ff6f91;}
 }
+
+/* Responsive scrollbar */
+.list::-webkit-scrollbar, #billContent::-webkit-scrollbar{
+  width:6px;
+}
+.list::-webkit-scrollbar-thumb, #billContent::-webkit-scrollbar-thumb{
+  background:#ffb6b9; border-radius:3px;
+}
 </style>
 </head>
 <body>
@@ -118,7 +130,6 @@ footer{text-align:center; padding:10px; font-size:12px; color:#555;}
     <div class="summary">
       <div id="finalSummary" class="big">ยังไม่มีข้อมูล</div>
     </div>
-
     <div class="add-card">
       <input list="itemList" id="title" placeholder="ชื่อรายการ เช่น ข้าวเที่ยง">
       <datalist id="itemList">
@@ -135,9 +146,7 @@ footer{text-align:center; padding:10px; font-size:12px; color:#555;}
       </select>
       <button id="addBtn">+ เพิ่มรายการ</button>
     </div>
-
     <div class="list" id="list"></div>
-
     <div style="text-align:center; margin-top:20px;">
       <button id="viewBillBtn">📄 ดูบิลสรุป</button>
       <button id="resetAll">♻️ รีเซ็ตทั้งหมด</button>
@@ -146,7 +155,6 @@ footer{text-align:center; padding:10px; font-size:12px; color:#555;}
   <footer>CoupleSplit — ใช้งานง่าย น่ารัก สดใส</footer>
 </div>
 
-<!-- popup บิล -->
 <div id="billPopup">
   <div id="billContent">
     <button class="closePopup">❌</button>
@@ -163,13 +171,11 @@ footer{text-align:center; padding:10px; font-size:12px; color:#555;}
   const title=$('title'), amount=$('amount'), payer=$('payer');
   const swapBtn=$('swapNamesBtn');
   const billPopup=$('billPopup'), billHTML=$('billHTML'), closePopup=document.querySelector('.closePopup');
-
   const STORAGE_KEY='couplesplit:expenses';
   let expenses=[];
 
   function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses)); }
   function load(){ expenses=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); render(); }
-
   function fmt(n){ return Number(n).toFixed(2)+' ฿'; }
 
   function computeBalances(list){
@@ -185,14 +191,12 @@ footer{text-align:center; padding:10px; font-size:12px; color:#555;}
   function render(){
     listEl.innerHTML='';
     if(expenses.length===0){ listEl.innerHTML='<div style="text-align:center; color:#888;">ยังไม่มีรายการ</div>'; }
-
     expenses.forEach((ex,i)=>{
       const item=document.createElement('div'); item.className='item';
       item.innerHTML=`<span>${ex.payerName} ซื้อ ${ex.title} ${Number(ex.amount).toFixed(2)} บาท</span>`;
       const delBtn=document.createElement('button'); delBtn.textContent='❌ ลบ';
       delBtn.onclick=()=>{expenses.splice(i,1); save(); render();}
-      item.appendChild(delBtn);
-      listEl.appendChild(item);
+      item.appendChild(delBtn); listEl.appendChild(item);
     });
 
     const balances=computeBalances(expenses);
@@ -215,17 +219,8 @@ footer{text-align:center; padding:10px; font-size:12px; color:#555;}
     save(); render();
   };
 
-  resetAll.onclick=()=>{
-    if(confirm('ลบข้อมูลทั้งหมด?')){ expenses=[]; save(); render(); }
-  };
-
-  swapBtn.onclick=()=>{
-    const tmp=youInput.value;
-    youInput.value=partnerInput.value;
-    partnerInput.value=tmp;
-    render();
-  };
-
+  resetAll.onclick=()=>{ if(confirm('ลบข้อมูลทั้งหมด?')){ expenses=[]; save(); render(); } };
+  swapBtn.onclick=()=>{ const tmp=youInput.value; youInput.value=partnerInput.value; partnerInput.value=tmp; render(); };
   viewBillBtn.onclick=()=>{
     const youName=youInput.value, partnerName=partnerInput.value;
     const balances=computeBalances(expenses);
@@ -234,20 +229,13 @@ footer{text-align:center; padding:10px; font-size:12px; color:#555;}
       html+=`<p style="color:green; font-weight:600;">${partnerName} ติด ${youName}: ${fmt(balances.partnerOwes - balances.youOwes)}</p>`;
     } else if(balances.youOwes > balances.partnerOwes){
       html+=`<p style="color:red; font-weight:600;">${youName} ติด ${partnerName}: ${fmt(balances.youOwes - balances.partnerOwes)}</p>`;
-    } else{
-      html+=`<p style="font-weight:600;">🎉 เสมอกัน ไม่มีใครติดใคร</p>`;
-    }
+    } else{ html+=`<p style="font-weight:600;">🎉 เสมอกัน ไม่มีใครติดใคร</p>`; }
     html+='<h3 style="margin-top:15px; text-align:center;">รายการทั้งหมด</h3><ul>';
-    expenses.forEach(ex=>{
-      html+=`<li>${ex.payerName} ซื้อ ${ex.title} ${Number(ex.amount).toFixed(2)} บาท</li>`;
-    });
+    expenses.forEach(ex=>{ html+=`<li>${ex.payerName} ซื้อ ${ex.title} ${Number(ex.amount).toFixed(2)} บาท</li>`; });
     html+='</ul>';
-    billHTML.innerHTML=html;
-    billPopup.style.display='flex';
+    billHTML.innerHTML=html; billPopup.style.display='flex';
   };
-
   closePopup.onclick=()=>{ billPopup.style.display='none'; }
-
   load();
 })();
 </script>
